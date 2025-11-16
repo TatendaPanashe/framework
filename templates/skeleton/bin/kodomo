@@ -1,0 +1,273 @@
+#!/usr/bin/env php
+<?php
+
+require __DIR__ . '/../vendor/autoload.php';
+
+$command = $argv[1] ?? null;
+$arg = $argv[2] ?? null;
+
+switch ($command) {
+    case 'make:controller':
+        if (!$arg) {
+            echo "Usage: php bin/kodomo make:controller ControllerName\n";
+            exit(1);
+        }
+        makeController($arg);
+        break;
+
+    case 'make:model':
+        if (!$arg) {
+            echo "Usage: php bin/kodomo make:model ModelName\n";
+            exit(1);
+        }
+        makeModel($arg);
+        break;
+
+    case 'make:view':
+        if (!$arg) {
+            echo "Usage: php bin/kodomo make:view viewName\n";
+            exit(1);
+        }
+        makeView($arg);
+        break;
+
+    case 'cache:clear':
+        clearCache();
+        break;
+
+    case 'list:routes':
+        listRoutes();
+        break;
+
+    case 'serve':
+        $port = $arg ?? '8000';
+        echo "🚀 Starting Kodomo development server on http://localhost:$port\n";
+        echo "📁 Serving from: " . getcwd() . "/public\n";
+        echo "⏹️  Press Ctrl+C to stop\n";
+        passthru("php -S localhost:$port -t public");
+        break;
+
+    default:
+        showHelp();
+}
+
+function showHelp()
+{
+    echo "🎌 Kodomo Framework CLI\n";
+    echo "======================\n\n";
+    echo "Available commands:\n";
+    echo "  make:controller <name>    Create a new controller\n";
+    echo "  make:model <name>         Create a new model\n";
+    echo "  make:view <name>          Create a new view\n";
+    echo "  cache:clear               Clear framework cache\n";
+    echo "  list:routes               List all registered routes\n";
+    echo "  serve [port]              Start development server (default: 8000)\n\n";
+    echo "Examples:\n";
+    echo "  php bin/kodomo make:controller ProductController\n";
+    echo "  php bin/kodomo make:model Product\n";
+    echo "  php bin/kodomo serve 8080\n";
+}
+
+function makeController($name)
+{
+    $base = getcwd();
+    $controllerFile = "$base/src/Controllers/{$name}.php";
+    
+    if (file_exists($controllerFile)) {
+        echo "❌ Controller '$name' already exists!\n";
+        return;
+    }
+
+    $namespace = 'App\Controllers';
+    $content = "<?php
+
+namespace {$namespace};
+
+class {$name}
+{
+    public function index()
+    {
+        return view('" . strtolower($name) . ".index');
+    }
+    
+    public function create()
+    {
+        return view('" . strtolower($name) . ".create');
+    }
+    
+    public function store(\\Kodomo\\Core\\Request \$request)
+    {
+        // Handle form submission
+        return redirect('/" . strtolower($name) . "');
+    }
+    
+    public function show(\$id)
+    {
+        return \"Showing {$name} with ID: \" . \$id;
+    }
+    
+    public function edit(\$id)
+    {
+        return view('" . strtolower($name) . ".edit', ['id' => \$id]);
+    }
+    
+    public function update(\\Kodomo\\Core\\Request \$request, \$id)
+    {
+        // Handle update
+        return redirect('/" . strtolower($name) . "/' . \$id);
+    }
+    
+    public function destroy(\$id)
+    {
+        // Handle deletion
+        return redirect('/" . strtolower($name) . "');
+    }
+}";
+
+    // Ensure directory exists
+    if (!is_dir(dirname($controllerFile))) {
+        mkdir(dirname($controllerFile), 0755, true);
+    }
+
+    file_put_contents($controllerFile, $content);
+    echo "✅ Controller created: src/Controllers/{$name}.php\n";
+}
+
+function makeModel($name)
+{
+    $base = getcwd();
+    $modelFile = "$base/src/Models/{$name}.php";
+    
+    if (file_exists($modelFile)) {
+        echo "❌ Model '$name' already exists!\n";
+        return;
+    }
+
+    $content = "<?php
+
+namespace App\Models;
+
+use Kodomo\\Models\\Model;
+
+class {$name} extends Model
+{
+    protected static \$table = '" . strtolower($name) . "s';
+    
+    // Add your model methods here
+    public function specialMethod()
+    {
+        return \"Special method from {$name} model\";
+    }
+}";
+
+    // Ensure directory exists
+    if (!is_dir(dirname($modelFile))) {
+        mkdir(dirname($modelFile), 0755, true);
+    }
+
+    file_put_contents($modelFile, $content);
+    echo "✅ Model created: src/Models/{$name}.php\n";
+}
+
+function makeView($name)
+{
+    $base = getcwd();
+    $viewFile = "$base/src/Views/{$name}.php";
+    
+    if (file_exists($viewFile)) {
+        echo "❌ View '$name' already exists!\n";
+        return;
+    }
+
+    $content = '<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>' . ucfirst($name) . ' - Kodomo Framework</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="/">🎌 Kodomo Framework</a>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <h1>' . ucfirst(str_replace('.', ' - ', $name)) . '</h1>
+        <p>This view was generated with Kodomo Framework CLI.</p>
+        
+        <div class="card">
+            <div class="card-body">
+                <h5 class="card-title">Welcome to your new view!</h5>
+                <p class="card-text">Start building your amazing application here.</p>
+                <a href="/" class="btn btn-primary">Go Home</a>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>';
+
+    // Ensure directory exists
+    if (!is_dir(dirname($viewFile))) {
+        mkdir(dirname($viewFile), 0755, true);
+    }
+
+    file_put_contents($viewFile, $content);
+    echo "✅ View created: src/Views/{$name}.php\n";
+}
+
+function clearCache()
+{
+    $base = getcwd();
+    $cacheDir = "$base/cache";
+    
+    if (is_dir($cacheDir)) {
+        array_map('unlink', glob("$cacheDir/*"));
+        echo "✅ Cache cleared!\n";
+    } else {
+        echo "ℹ️  No cache directory found.\n";
+    }
+    
+    if (function_exists('opcache_reset')) {
+        opcache_reset();
+        echo "✅ OPcache cleared!\n";
+    }
+}
+
+function listRoutes()
+{
+    $base = getcwd();
+    $webRoutesFile = "$base/routes/web.php";
+    $apiRoutesFile = "$base/routes/api.php";
+    
+    echo "📍 Registered Routes:\n";
+    echo "====================\n";
+    
+    if (file_exists($webRoutesFile)) {
+        echo "🌐 Web Routes:\n";
+        $content = file_get_contents($webRoutesFile);
+        preg_match_all('/\\$router->(get|post|put|delete)\\(\\s*\\\'([^\\\']+)\\\'\\s*,\\s*\\[([^]]+)\\]/', $content, $matches);
+        
+        foreach ($matches[1] as $index => $method) {
+            $path = $matches[2][$index];
+            $handler = $matches[3][$index];
+            echo "  " . str_pad(strtoupper($method), 6) . " $path → $handler\n";
+        }
+    }
+    
+    if (file_exists($apiRoutesFile)) {
+        echo "\n🔗 API Routes:\n";
+        $content = file_get_contents($apiRoutesFile);
+        preg_match_all('/\\$router->(get|post|put|delete)\\(\\s*\\\'([^\\\']+)\\\'\\s*,\\s*\\[([^]]+)\\]/', $content, $matches);
+        
+        foreach ($matches[1] as $index => $method) {
+            $path = $matches[2][$index];
+            $handler = $matches[3][$index];
+            echo "  " . str_pad(strtoupper($method), 6) . " $path → $handler\n";
+        }
+    }
+}

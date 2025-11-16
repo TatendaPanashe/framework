@@ -1,0 +1,745 @@
+#!/usr/bin/env php
+<?php
+
+require __DIR__ . '/../vendor/autoload.php';
+
+$command = $argv[1] ?? null;
+$arg = $argv[2] ?? null;
+$arg2 = $argv[3] ?? null;
+
+switch ($command) {
+
+    case 'new:project':
+        if (!$arg) {
+            echo "Usage: php bin/tiny new:project projectName\n";
+            exit;
+        }
+        createProject($arg);
+        break;
+
+    case 'make:controller':
+        if (!$arg) {
+            echo "Usage: php bin/tiny make:controller ControllerName\n";
+            exit;
+        }
+        makeController($arg);
+        break;
+
+    case 'make:model':
+        if (!$arg) {
+            echo "Usage: php bin/tiny make:model ModelName\n";
+            exit;
+        }
+        makeModel($arg);
+        break;
+
+    case 'make:view':
+        if (!$arg) {
+            echo "Usage: php bin/tiny make:view viewName\n";
+            exit;
+        }
+        makeView($arg);
+        break;
+
+    case 'cache:clear':
+        clearCache();
+        break;
+
+    case 'list:routes':
+        listRoutes();
+        break;
+
+    case 'hello':
+        echo "Hello from Tiny Framework CLI!\n";
+        break;
+
+    default:
+        showHelp();
+}
+
+function showHelp()
+{
+    echo "Tiny Framework CLI\n";
+    echo "Available commands:\n";
+    echo "  new:project <name>        Create a new project\n";
+    echo "  make:controller <name>    Create a new controller\n";
+    echo "  make:model <name>         Create a new model\n";
+    echo "  make:view <name>          Create a new view\n";
+    echo "  cache:clear               Clear framework cache\n";
+    echo "  list:routes               List all registered routes\n";
+    echo "  hello                     Test command\n";
+}
+
+function createProject($name)
+{
+    $base = getcwd() . '/' . $name;
+
+    if (file_exists($base)) {
+        echo "Directory '$name' already exists!\n";
+        exit;
+    }
+
+    mkdir($base);
+    mkdir("$base/bin");
+    mkdir("$base/public");
+    mkdir("$base/src");
+    mkdir("$base/src/Core");
+    mkdir("$base/src/Controllers");
+    mkdir("$base/src/Models");
+    mkdir("$base/src/Views");
+    mkdir("$base/config");
+
+    // ---- Write files -----
+
+    // tiny CLI - Simplified version for new projects
+    file_put_contents("$base/bin/tiny", getSimpleTinyCliScript());
+
+    // index.php
+    file_put_contents("$base/public/index.php", getIndexFile());
+
+    // Core classes
+    file_put_contents("$base/src/Core/App.php", getAppClass());
+    file_put_contents("$base/src/Core/Router.php", getRouterClass());
+    file_put_contents("$base/src/Core/Request.php", getRequestClass());
+    file_put_contents("$base/src/Core/Response.php", getResponseClass());
+    file_put_contents("$base/src/Core/Database.php", getDatabaseClass());
+
+    // Base Model
+    file_put_contents("$base/src/Models/Model.php", getModelClass());
+
+    // View example
+    file_put_contents("$base/src/Views/home.php", getHomeView());
+
+    // Controller
+    file_put_contents("$base/src/Controllers/HomeController.php", getHomeController());
+
+    // Config
+    file_put_contents("$base/config/database.php", getDatabaseConfig());
+
+    // Composer file
+    file_put_contents("$base/composer.json", getComposerJson());
+
+    // README
+    file_put_contents("$base/README.md", "# $name\n\nGenerated with Tiny Framework CLI.");
+
+    echo "Project '$name' created successfully!\n";
+    echo "Next steps:\n";
+    echo "  cd $name\n";
+    echo "  composer install\n";
+    echo "  php -S localhost:8000 -t public\n";
+}
+
+function getSimpleTinyCliScript()
+{
+    return '#!/usr/bin/env php
+<?php
+require __DIR__ . \'/../vendor/autoload.php\';
+
+$command = $argv[1] ?? null;
+$arg = $argv[2] ?? null;
+
+switch ($command) {
+    case \'make:controller\':
+        if (!$arg) {
+            echo "Usage: php bin/tiny make:controller ControllerName\n";
+            exit;
+        }
+        $base = getcwd();
+        $controllerFile = "$base/src/Controllers/{$arg}.php";
+        
+        if (file_exists($controllerFile)) {
+            echo "Controller \'$arg\' already exists!\n";
+            exit;
+        }
+
+        $content = "<?php
+
+namespace Tiny\Controllers;
+
+class {$arg}
+{
+    public function index()
+    {
+        return \"Hello from {$arg}::index()\";
+    }
+}";
+
+        file_put_contents($controllerFile, $content);
+        echo "Controller created: src/Controllers/{$arg}.php\n";
+        break;
+
+    case \'make:model\':
+        if (!$arg) {
+            echo "Usage: php bin/tiny make:model ModelName\n";
+            exit;
+        }
+        $base = getcwd();
+        $modelFile = "$base/src/Models/{$arg}.php";
+        
+        if (file_exists($modelFile)) {
+            echo "Model \'$arg\' already exists!\n";
+            exit;
+        }
+
+        $content = "<?php
+
+namespace Tiny\Models;
+
+class {$arg} extends Model
+{
+    protected static \$table = \'" . strtolower($arg) . "s\';
+}";
+
+        file_put_contents($modelFile, $content);
+        echo "Model created: src/Models/{$arg}.php\n";
+        break;
+
+    case \'make:view\':
+        if (!$arg) {
+            echo "Usage: php bin/tiny make:view viewName\n";
+            exit;
+        }
+        $base = getcwd();
+        $viewFile = "$base/src/Views/{$arg}.php";
+        
+        if (file_exists($viewFile)) {
+            echo "View \'$arg\' already exists!\n";
+            exit;
+        }
+
+        $content = \'<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>\' . $arg . \'</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">Tiny Framework</a>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <h1>Welcome to \' . $arg . \' View</h1>
+        <p>This view includes Bootstrap styling.</p>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>\';
+
+        file_put_contents($viewFile, $content);
+        echo "View created: src/Views/{$arg}.php (with Bootstrap)\n";
+        break;
+
+    case \'cache:clear\':
+        $base = getcwd();
+        $cacheDir = "$base/cache";
+        
+        if (is_dir($cacheDir)) {
+            array_map(\'unlink\', glob("$cacheDir/*"));
+            echo "Cache cleared!\n";
+        } else {
+            echo "No cache directory found.\n";
+        }
+        
+        if (function_exists(\'opcache_reset\')) {
+            opcache_reset();
+            echo "OPcache cleared!\n";
+        }
+        break;
+
+    case \'list:routes\':
+        $base = getcwd();
+        $indexFile = "$base/public/index.php";
+        
+        if (!file_exists($indexFile)) {
+            echo "No routes file found.\n";
+            exit;
+        }
+        
+        echo "Registered Routes:\n";
+        echo "==================\n";
+        
+        $content = file_get_contents($indexFile);
+        preg_match_all(\'/\\$app->router->(get|post|put|delete)\\s*\\(\\s*\\\'([^\\\']+)\\\'\\s*,\\s*\\[([^]]+)\\]/\', $content, $matches);
+        
+        if (empty($matches[0])) {
+            echo "No routes found.\n";
+            exit;
+        }
+        
+        foreach ($matches[1] as $index => $method) {
+            $path = $matches[2][$index];
+            $handler = $matches[3][$index];
+            echo str_pad(strtoupper($method), 6) . " $path -> $handler\n";
+        }
+        break;
+
+    default:
+        echo "Tiny Framework CLI\n";
+        echo "Available commands:\n";
+        echo "  make:controller <name>\n";
+        echo "  make:model <name>\n";
+        echo "  make:view <name>\n";
+        echo "  cache:clear\n";
+        echo "  list:routes\n";
+}';
+}
+
+function getIndexFile()
+{
+    return '<?php
+
+require __DIR__ . \'/../vendor/autoload.php\';
+
+use Tiny\Core\App;
+
+$app = new App();
+
+$app->router->get(\'/\', [\Tiny\Controllers\HomeController::class, \'index\']);
+
+$app->run();';
+}
+
+function getAppClass()
+{
+    return '<?php
+
+namespace Tiny\Core;
+
+class App
+{
+    public Router $router;
+    public Request $request;
+    public Response $response;
+
+    public function __construct()
+    {
+        $this->router = new Router();
+        $this->request = new Request();
+        $this->response = new Response();
+    }
+
+    public function run()
+    {
+        echo $this->router->resolve($this->request, $this->response);
+    }
+}';
+}
+
+function getRouterClass()
+{
+    return '<?php
+
+namespace Tiny\Core;
+
+class Router
+{
+    private array $routes = [];
+
+    public function get($path, $handler)
+    {
+        $this->routes[\'GET\'][$path] = $handler;
+    }
+
+    public function post($path, $handler)
+    {
+        $this->routes[\'POST\'][$path] = $handler;
+    }
+
+    public function put($path, $handler)
+    {
+        $this->routes[\'PUT\'][$path] = $handler;
+    }
+
+    public function delete($path, $handler)
+    {
+        $this->routes[\'DELETE\'][$path] = $handler;
+    }
+
+    public function getRoutes()
+    {
+        return $this->routes;
+    }
+
+    public function resolve($request, $response)
+    {
+        $path = $request->getPath();
+        $method = $request->getMethod();
+
+        $handler = $this->routes[$method][$path] ?? false;
+
+        if (!$handler) {
+            $response->setStatusCode(404);
+            return "404 Not Found - $path";
+        }
+
+        if (is_array($handler)) {
+            $controller = new $handler[0];
+            return $controller->{$handler[1]}($request);
+        }
+
+        return call_user_func($handler, $request);
+    }
+}';
+}
+
+function getRequestClass()
+{
+    return '<?php
+
+namespace Tiny\Core;
+
+class Request
+{
+    public function getPath()
+    {
+        $path = $_SERVER[\'REQUEST_URI\'] ?? \'/\';
+        return strtok($path, \'?\');
+    }
+
+    public function getMethod()
+    {
+        return strtoupper($_SERVER[\'REQUEST_METHOD\'] ?? \'GET\');
+    }
+
+    public function input($key, $default = null)
+    {
+        return $_POST[$key] ?? $_GET[$key] ?? $default;
+    }
+
+    public function all()
+    {
+        return array_merge($_GET, $_POST);
+    }
+}';
+}
+
+function getResponseClass()
+{
+    return '<?php
+
+namespace Tiny\Core;
+
+class Response
+{
+    public function setStatusCode($code)
+    {
+        http_response_code($code);
+    }
+}';
+}
+
+function getDatabaseClass()
+{
+    return '<?php
+
+namespace Tiny\Core;
+
+use PDO;
+
+class Database
+{
+    protected PDO $pdo;
+
+    public function __construct($config)
+    {
+        $this->pdo = new PDO(
+            $config[\'dsn\'],
+            $config[\'user\'],
+            $config[\'password\']
+        );
+    }
+}';
+}
+
+function getModelClass()
+{
+    return '<?php
+
+namespace Tiny\Models;
+
+class Model
+{
+    // Base model class
+}';
+}
+
+function getHomeView()
+{
+    return '<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Tiny Framework</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">Tiny Framework</a>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <h1>Welcome to Tiny Framework!</h1>
+        <div class="alert alert-success">
+            Your project is running successfully!
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>';
+}
+
+function getHomeController()
+{
+    return '<?php
+
+namespace Tiny\Controllers;
+
+class HomeController
+{
+    public function index()
+    {
+        return view(\'home\');
+    }
+}
+
+function view($viewName, $data = [])
+{
+    extract($data);
+    ob_start();
+    include __DIR__ . "/../Views/{$viewName}.php";
+    return ob_get_clean();
+}';
+}
+
+function getDatabaseConfig()
+{
+    return '<?php
+
+return [
+    \'dsn\' => \'mysql:host=localhost;dbname=test\',
+    \'user\' => \'root\',
+    \'password\' => \'\'
+];';
+}
+
+function getComposerJson()
+{
+    return '{
+    "name": "tiny-framework/project",
+    "autoload": {
+        "psr-4": {
+            "Tiny\\\\": "src/"
+        }
+    },
+    "require": {}
+}';
+}
+
+// Generator functions for the main CLI
+function makeController($name)
+{
+    $base = getcwd();
+    $controllerFile = "$base/src/Controllers/{$name}.php";
+    
+    if (file_exists($controllerFile)) {
+        echo "Controller '$name' already exists!\n";
+        return;
+    }
+
+    $content = "<?php
+
+namespace Tiny\Controllers;
+
+class {$name}
+{
+    public function index()
+    {
+        return \"Hello from {$name}::index()\";
+    }
+}";
+
+    file_put_contents($controllerFile, $content);
+    echo "Controller created: src/Controllers/{$name}.php\n";
+}
+
+function makeModel($name)
+{
+    $base = getcwd();
+    $modelFile = "$base/src/Models/{$name}.php";
+    
+    if (file_exists($modelFile)) {
+        echo "Model '$name' already exists!\n";
+        return;
+    }
+
+    $content = "<?php
+
+namespace Tiny\Models;
+
+class {$name} extends Model
+{
+    protected static \$table = '" . strtolower($name) . "s';
+}";
+
+    file_put_contents($modelFile, $content);
+    echo "Model created: src/Models/{$name}.php\n";
+}
+
+function makeView($name)
+{
+    $base = getcwd();
+    $viewFile = "$base/src/Views/{$name}.php";
+    
+    if (file_exists($viewFile)) {
+        echo "View '$name' already exists!\n";
+        return;
+    }
+
+    $content = '<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>' . $name . '</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+        <div class="container">
+            <a class="navbar-brand" href="#">Tiny Framework</a>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <h1>Welcome to ' . $name . ' View</h1>
+        <p>This view includes Bootstrap styling.</p>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+</body>
+</html>';
+
+    file_put_contents($viewFile, $content);
+    echo "View created: src/Views/{$name}.php (with Bootstrap)\n";
+}
+
+function clearCache()
+{
+    $base = getcwd();
+    $cacheDir = "$base/cache";
+    
+    if (is_dir($cacheDir)) {
+        array_map('unlink', glob("$cacheDir/*"));
+        echo "Cache cleared!\n";
+    } else {
+        echo "No cache directory found.\n";
+    }
+    
+    if (function_exists('opcache_reset')) {
+        opcache_reset();
+        echo "OPcache cleared!\n";
+    }
+}
+
+function listRoutes()
+{
+    $base = getcwd();
+    $indexFile = "$base/public/index.php";
+    
+    if (!file_exists($indexFile)) {
+        echo "No routes file found.\n";
+        return;
+    }
+    
+    echo "Registered Routes:\n";
+    echo "==================\n";
+    
+    $content = file_get_contents($indexFile);
+    preg_match_all('/\$app->router->(get|post|put|delete)\s*\(\s*\'([^\']+)\'\s*,\s*\[([^]]+)\]/', $content, $matches);
+    
+    if (empty($matches[0])) {
+        echo "No routes found or unable to parse routes.\n";
+        return;
+    }
+    
+    foreach ($matches[1] as $index => $method) {
+        $path = $matches[2][$index];
+        $handler = $matches[3][$index];
+        echo str_pad(strtoupper($method), 6) . " $path -> $handler\n";
+    }
+
+
+
+    #!/usr/bin/env php
+
+
+// Check if running as global composer package or local
+if (file_exists(__DIR__ . '/../../autoload.php')) {
+    // Global installation
+    require __DIR__ . '/../../autoload.php';
+} elseif (file_exists(__DIR__ . '/../vendor/autoload.php')) {
+    // Local installation
+    require __DIR__ . '/../vendor/autoload.php';
+} else {
+    echo "❌ Composer autoload not found. Please run 'composer install' first.\n";
+    exit(1);
+}
+
+
+
+$command = $argv[1] ?? null;
+$projectName = $argv[2] ?? null;
+
+switch ($command) {
+    case 'new':
+        if (!$projectName) {
+            echo "Usage: kodomo new <project-name>\n";
+            echo "Example: kodomo new my-app\n";
+            exit(1);
+        }
+        
+        try {
+            $projectPath = Installer::createProject($projectName);
+            
+            echo "🎉 Kodomo project '$projectName' created successfully!\n\n";
+            echo "📁 Location: $projectPath\n\n";
+            echo "🚀 Next steps:\n";
+            echo "   cd $projectName\n";
+            echo "   composer install\n";
+            echo "   php -S localhost:8000 -t public\n\n";
+            echo "📚 Documentation: https://github.com/your-github-username/kodomo-framework\n";
+            
+        } catch (Exception $e) {
+            echo "❌ Error: " . $e->getMessage() . "\n";
+            exit(1);
+        }
+        break;
+        
+    case '--version':
+    case '-v':
+        echo "Kodomo Framework v1.0.0\n";
+        break;
+        
+    default:
+        echo "🎌 Kodomo Framework CLI\n";
+        echo "======================\n\n";
+        echo "Usage:\n";
+        echo "  kodomo new <project-name>    Create a new Kodomo project\n";
+        echo "  kodomo --version             Show version information\n";
+        echo "  kodomo -v                    Show version information\n\n";
+        echo "Examples:\n";
+        echo "  kodomo new blog              Create a new blog project\n";
+        echo "  kodomo new api-server        Create a new API project\n\n";
+        echo "Documentation: https://github.com/your-github-username/kodomo-framework\n";
+}
+}

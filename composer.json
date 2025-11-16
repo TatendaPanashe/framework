@@ -1,0 +1,58 @@
+{
+    "name": "TatendaPanashe/kodomo",
+    "description": "A lightweight, fast PHP framework for modern web development - Simple as a child, powerful as needed",
+    "type": "library",
+    "keywords": [
+        "framework",
+        "php",
+        "mvc",
+        "lightweight",
+        "fast",
+        "simple",
+        "kodomo"
+    ],
+    "homepage": "https://github.com/TatendaPanashe/kodomo.git",
+    "license": "MIT",
+    "authors": [
+        {
+            "name": "Tatenda Panashe Chiota",
+            "email": "tchiota@kodomotech.co.zw",
+            "homepage": "https://kodomotech.co.zw",
+            "role": "Creator"
+        }
+    ],
+    "require": {
+        "php": "^8.0",
+        "ext-json": "*",
+        "ext-pdo": "*"
+    },
+    "require-dev": {
+        "phpunit/phpunit": "^9.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "Kodomo\\": "src/"
+        }
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Kodomo\\Tests\\": "tests/"
+        }
+    },
+    "bin": ["bin/kodomo"],
+    "scripts": {
+        "post-install-cmd": [
+            "Kodomo\\Installer::postInstall"
+        ],
+        "post-update-cmd": [
+            "Kodomo\\Installer::postUpdate"
+        ]
+    },
+    "extra": {
+        "branch-alias": {
+            "dev-main": "1.0-dev"
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true
+}

@@ -1,0 +1,9 @@
+{
+    "name": "tiny-framework/project",
+    "autoload": {
+        "psr-4": {
+            "Tiny\\": "src/"
+        }
+    },
+    "require": {}
+}

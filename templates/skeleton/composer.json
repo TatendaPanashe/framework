@@ -1,0 +1,29 @@
+{
+    "name": "kodomo-framework/project",
+    "description": "A project built with Kodomo Framework",
+    "type": "project",
+    "require": {
+        "php": "^8.0",
+        "your-github-username/kodomo-framework": "^1.0"
+    },
+    "autoload": {
+        "psr-4": {
+            "App\\": "src/"
+        },
+        "files": [
+            "src/helpers.php"
+        ]
+    },
+    "autoload-dev": {
+        "psr-4": {
+            "Tests\\": "tests/"
+        }
+    },
+    "minimum-stability": "dev",
+    "prefer-stable": true,
+    "scripts": {
+        "serve": [
+            "php bin/kodomo serve"
+        ]
+    }
+}
